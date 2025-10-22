@@ -874,13 +874,13 @@
                 let judgement, points;
                 if (diff <= timing.perfect) {
                     judgement = 'Perfect';
-                    points = 300;
+                    points = 100;
                 } else if (diff <= timing.great) {
                     judgement = 'Great';
-                    points = 200;
+                    points = 70;
                 } else if (diff <= timing.good) {
                     judgement = 'Good';
-                    points = 100;
+                    points = 50;
                 } else {
                     judgement = 'Miss';
                     points = 0;
@@ -889,7 +889,8 @@
                 // 즉시 상태 업데이트
                 if (judgement !== 'Miss') {
                     setCombo(prev => prev + 1);
-                    setScore(prev => prev + points + (combo * 10));
+                    // 콤보 보너스는 5점씩만
+                    setScore(prev => prev + points + Math.min(combo * 2, 50));
                     setJudgements(prev => ({ ...prev, [judgement.toLowerCase()]: prev[judgement.toLowerCase()] + 1 }));
                     soundSystem.playSound(settings.soundPack, judgement.toLowerCase());
                 } else {
