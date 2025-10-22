@@ -1,0 +1,1165 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>퉁퉁퉁퉁! 소리의 과학 게임 실험실</title>
+    <script crossorigin src="https://unpkg.com/react@18/umd/react.production.min.js"></script>
+    <script crossorigin src="https://unpkg.com/react-dom@18/umd/react-dom.production.min.js"></script>
+    <script src="https://unpkg.com/@babel/standalone/babel.min.js"></script>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <style>
+        @keyframes wave {
+            0%, 100% { transform: scale(1); opacity: 1; }
+            50% { transform: scale(1.5); opacity: 0; }
+        }
+        .wave-ring {
+            animation: wave 2s ease-out infinite;
+        }
+        @keyframes pulse-ring {
+            0% { transform: scale(1); opacity: 1; }
+            100% { transform: scale(1.3); opacity: 0; }
+        }
+        .pulse-ring {
+            animation: pulse-ring 1s ease-out forwards;
+        }
+        @keyframes shake {
+            0%, 100% { transform: translateX(0); }
+            25% { transform: translateX(-5px); }
+            75% { transform: translateX(5px); }
+        }
+        .shake {
+            animation: shake 0.3s ease-in-out;
+        }
+        .bg-gradient-sky {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+        }
+        .bg-gradient-space {
+            background: linear-gradient(135deg, #1e3c72 0%, #2a5298 100%);
+        }
+        .bg-gradient-ocean {
+            background: linear-gradient(135deg, #2e3192 0%, #1bffff 100%);
+        }
+        .bg-gradient-forest {
+            background: linear-gradient(135deg, #134e5e 0%, #71b280 100%);
+        }
+    </style>
+</head>
+<body>
+    <div id="root"></div>
+
+    <script type="text/babel">
+        const { useState, useEffect, useRef } = React;
+
+        // 메인 앱 컴포넌트
+        function App() {
+            const [currentScreen, setCurrentScreen] = useState('home');
+            const [gameSettings, setGameSettings] = useState({
+                bpm: 120,
+                difficulty: 'easy',
+                soundPack: 'drum',
+                theme: 'sky',
+                vibration: true,
+                guideLine: true
+            });
+            const [teamScores, setTeamScores] = useState([]);
+
+            const screens = {
+                home: <HomeScreen onNavigate={setCurrentScreen} />,
+                learn: <LearnScreen onNavigate={setCurrentScreen} />,
+                settings: <SettingsScreen 
+                    settings={gameSettings} 
+                    onSettingsChange={setGameSettings}
+                    onNavigate={setCurrentScreen} 
+                />,
+                game: <GameScreen 
+                    settings={gameSettings}
+                    onNavigate={setCurrentScreen}
+                    onScoreSubmit={(score) => setTeamScores([...teamScores, score])}
+                />,
+                miniGame: <MiniGameScreen onNavigate={setCurrentScreen} />,
+                teamBattle: <TeamBattleScreen 
+                    scores={teamScores}
+                    onNavigate={setCurrentScreen}
+                />
+            };
+
+            return (
+                <div className="min-h-screen bg-gray-50">
+                    {screens[currentScreen]}
+                </div>
+            );
+        }
+
+        // 홈 화면
+        function HomeScreen({ onNavigate }) {
+            return (
+                <div className="min-h-screen bg-gradient-sky flex flex-col items-center justify-center p-6">
+                    <div className="text-center mb-12">
+                        <h1 className="text-5xl font-bold text-white mb-4">
+                            퉁퉁퉁퉁!
+                        </h1>
+                        <h2 className="text-3xl font-semibold text-white mb-2">
+                            소리의 과학 게임 실험실
+                        </h2>
+                        <p className="text-xl text-white/90">
+                            오늘의 과학자가 내일의 과학자를 만난다!
+                        </p>
+                    </div>
+
+                    <div className="bg-white rounded-2xl shadow-2xl p-8 max-w-md w-full space-y-4">
+                        <MenuButton 
+                            icon="🎓" 
+                            title="소리의 과학 배우기"
+                            description="진동, 파동, 주파수를 알아보아요"
+                            onClick={() => onNavigate('learn')}
+                            color="bg-blue-500"
+                        />
+                        
+                        <MenuButton 
+                            icon="⚙️" 
+                            title="게임 설정하기"
+                            description="난이도와 사운드를 선택해요"
+                            onClick={() => onNavigate('settings')}
+                            color="bg-purple-500"
+                        />
+                        
+                        <MenuButton 
+                            icon="🎮" 
+                            title="리듬 게임 시작"
+                            description="빛의 고리를 정확히 탭하세요"
+                            onClick={() => onNavigate('game')}
+                            color="bg-green-500"
+                        />
+                        
+                        <MenuButton 
+                            icon="🎯" 
+                            title="소리 맞히기 게임"
+                            description="미니 게임으로 소리를 배워요"
+                            onClick={() => onNavigate('miniGame')}
+                            color="bg-orange-500"
+                        />
+                        
+                        <MenuButton 
+                            icon="🏆" 
+                            title="가족 대항전"
+                            description="팀별로 경쟁해보세요"
+                            onClick={() => onNavigate('teamBattle')}
+                            color="bg-red-500"
+                        />
+                    </div>
+
+                    <p className="text-white/80 mt-8 text-center">
+                        초등 3학년 눈높이로 함께 놀이하며 배워요 🌟
+                    </p>
+                </div>
+            );
+        }
+
+        // 메뉴 버튼 컴포넌트
+        function MenuButton({ icon, title, description, onClick, color }) {
+            return (
+                <button
+                    onClick={onClick}
+                    className={`w-full ${color} hover:opacity-90 transition-all duration-200 rounded-xl p-4 text-left shadow-lg hover:shadow-xl transform hover:scale-105`}
+                >
+                    <div className="flex items-center space-x-4">
+                        <span className="text-4xl">{icon}</span>
+                        <div className="flex-1">
+                            <h3 className="text-xl font-bold text-white">{title}</h3>
+                            <p className="text-sm text-white/80">{description}</p>
+                        </div>
+                    </div>
+                </button>
+            );
+        }
+
+        // 학습 화면
+        function LearnScreen({ onNavigate }) {
+            const [currentSection, setCurrentSection] = useState(0);
+
+            const sections = [
+                {
+                    title: "소리란 무엇일까?",
+                    icon: "🔊",
+                    content: (
+                        <div className="space-y-4">
+                            <div className="bg-blue-50 p-4 rounded-lg">
+                                <h4 className="font-bold text-blue-800 mb-2">💫 소리는 '떨림(진동)'에서 시작!</h4>
+                                <p className="text-gray-700">
+                                    물체가 떨리면서 공기를 진동시키고, 그 진동이 우리 귀에 전달되어 소리를 들을 수 있어요.
+                                </p>
+                            </div>
+                            <div className="bg-purple-50 p-4 rounded-lg">
+                                <h4 className="font-bold text-purple-800 mb-2">🌊 공기를 타고 '파동'으로 퍼져요</h4>
+                                <p className="text-gray-700">
+                                    연못에 돌을 던졌을 때 물결이 퍼지는 것처럼, 소리도 공기 속에서 파동의 형태로 퍼져나가요.
+                                </p>
+                            </div>
+                            <div className="bg-yellow-50 p-4 rounded-lg">
+                                <p className="text-gray-700 italic">
+                                    💡 소리가 없는 우주에서는 서로 말소리를 들을 수 없어요! 왜일까요?
+                                </p>
+                            </div>
+                        </div>
+                    )
+                },
+                {
+                    title: "진동을 느껴보세요",
+                    icon: "👋",
+                    content: (
+                        <div className="space-y-4">
+                            <div className="bg-green-50 p-4 rounded-lg">
+                                <h4 className="font-bold text-green-800 mb-2">🎤 목에 손 대고 '아—' 소리 내기</h4>
+                                <p className="text-gray-700">
+                                    목에 손을 가볍게 대고 '아—' 소리를 내볼까요? 손으로 목에서 느껴지는 진동을 느껴보세요.
+                                </p>
+                            </div>
+                            <div className="bg-orange-50 p-4 rounded-lg">
+                                <h4 className="font-bold text-orange-800 mb-2">📱 탁자에 휴대폰 음악 올려두기</h4>
+                                <p className="text-gray-700">
+                                    휴대폰에서 음악을 재생한 뒤 탁자 위에 올려놓으세요. 휴대폰과 탁자가 함께 진동하는 모습을 관찰할 수 있어요!
+                                </p>
+                            </div>
+                        </div>
+                    )
+                },
+                {
+                    title: "주파수와 음의 높낮이",
+                    icon: "🎵",
+                    content: (
+                        <div className="space-y-4">
+                            <div className="bg-pink-50 p-4 rounded-lg">
+                                <h4 className="font-bold text-pink-800 mb-2">⚡ 1초에 몇 번 떨리나?</h4>
+                                <p className="text-gray-700 mb-3">
+                                    주파수(Hz) = 1초 동안 진동 횟수
+                                </p>
+                                <div className="space-y-2">
+                                    <div className="flex items-center space-x-2">
+                                        <span className="text-2xl">👧</span>
+                                        <span className="text-gray-700">어린이 목소리: 높은 주파수 (200-300Hz)</span>
+                                    </div>
+                                    <div className="flex items-center space-x-2">
+                                        <span className="text-2xl">🎹</span>
+                                        <span className="text-gray-700">피아노: 중간 주파수</span>
+                                    </div>
+                                    <div className="flex items-center space-x-2">
+                                        <span className="text-2xl">👨</span>
+                                        <span className="text-gray-700">아빠 목소리: 낮은 주파수 (85-180Hz)</span>
+                                    </div>
+                                </div>
+                            </div>
+                            <div className="bg-indigo-50 p-4 rounded-lg">
+                                <p className="text-gray-700 font-semibold">
+                                    💡 빠르게 떨리면 높은 음, 느리게 떨리면 낮은 음!
+                                </p>
+                            </div>
+                        </div>
+                    )
+                },
+                {
+                    title: "리듬이란?",
+                    icon: "🎼",
+                    content: (
+                        <div className="space-y-4">
+                            <div className="bg-teal-50 p-4 rounded-lg">
+                                <h4 className="font-bold text-teal-800 mb-2">📏 일정한 간격의 규칙과 패턴</h4>
+                                <p className="text-gray-700">
+                                    리듬은 음악의 심장이에요. BPM(분당 박수/비트 수)으로 속도를 나타냅니다.
+                                </p>
+                            </div>
+                            <div className="bg-cyan-50 p-4 rounded-lg">
+                                <h4 className="font-bold text-cyan-800 mb-2">👏 다 같이 '퉁·퉁·퉁·퉁' 손뼉!</h4>
+                                <p className="text-gray-700">
+                                    일정한 간격으로 손뼉을 치면 리듬이 만들어져요. 빠르기를 바꾸면 느낌도 달라져요!
+                                </p>
+                            </div>
+                        </div>
+                    )
+                }
+            ];
+
+            return (
+                <div className="min-h-screen bg-gradient-to-br from-blue-100 to-purple-100 p-6">
+                    <div className="max-w-2xl mx-auto">
+                        {/* 헤더 */}
+                        <div className="flex items-center justify-between mb-6">
+                            <button
+                                onClick={() => onNavigate('home')}
+                                className="px-4 py-2 bg-white rounded-lg shadow hover:shadow-md transition-shadow"
+                            >
+                                ← 홈으로
+                            </button>
+                            <h2 className="text-2xl font-bold text-gray-800">소리의 과학 배우기</h2>
+                            <div className="w-20"></div>
+                        </div>
+
+                        {/* 진행 바 */}
+                        <div className="mb-6">
+                            <div className="flex justify-between mb-2">
+                                {sections.map((_, index) => (
+                                    <div
+                                        key={index}
+                                        className={`h-2 flex-1 mx-1 rounded-full transition-colors ${
+                                            index <= currentSection ? 'bg-blue-500' : 'bg-gray-300'
+                                        }`}
+                                    />
+                                ))}
+                            </div>
+                            <p className="text-center text-sm text-gray-600">
+                                {currentSection + 1} / {sections.length}
+                            </p>
+                        </div>
+
+                        {/* 콘텐츠 */}
+                        <div className="bg-white rounded-2xl shadow-xl p-8 mb-6">
+                            <div className="text-center mb-6">
+                                <span className="text-6xl mb-4 inline-block">{sections[currentSection].icon}</span>
+                                <h3 className="text-3xl font-bold text-gray-800">
+                                    {sections[currentSection].title}
+                                </h3>
+                            </div>
+                            {sections[currentSection].content}
+                        </div>
+
+                        {/* 네비게이션 버튼 */}
+                        <div className="flex justify-between">
+                            <button
+                                onClick={() => setCurrentSection(Math.max(0, currentSection - 1))}
+                                disabled={currentSection === 0}
+                                className={`px-6 py-3 rounded-lg font-semibold transition-all ${
+                                    currentSection === 0
+                                        ? 'bg-gray-300 text-gray-500 cursor-not-allowed'
+                                        : 'bg-blue-500 text-white hover:bg-blue-600'
+                                }`}
+                            >
+                                ← 이전
+                            </button>
+                            
+                            {currentSection < sections.length - 1 ? (
+                                <button
+                                    onClick={() => setCurrentSection(currentSection + 1)}
+                                    className="px-6 py-3 bg-blue-500 text-white rounded-lg font-semibold hover:bg-blue-600 transition-all"
+                                >
+                                    다음 →
+                                </button>
+                            ) : (
+                                <button
+                                    onClick={() => onNavigate('settings')}
+                                    className="px-6 py-3 bg-green-500 text-white rounded-lg font-semibold hover:bg-green-600 transition-all"
+                                >
+                                    게임 시작하기 🎮
+                                </button>
+                            )}
+                        </div>
+                    </div>
+                </div>
+            );
+        }
+
+        // 설정 화면
+        function SettingsScreen({ settings, onSettingsChange, onNavigate }) {
+            const presets = {
+                beginner: { bpm: 100, difficulty: 'easy', guideLine: true },
+                intermediate: { bpm: 120, difficulty: 'normal', guideLine: true },
+                advanced: { bpm: 150, difficulty: 'hard', guideLine: false }
+            };
+
+            const applyPreset = (preset) => {
+                onSettingsChange({ ...settings, ...presets[preset] });
+            };
+
+            return (
+                <div className="min-h-screen bg-gradient-to-br from-purple-100 to-pink-100 p-6">
+                    <div className="max-w-2xl mx-auto">
+                        {/* 헤더 */}
+                        <div className="flex items-center justify-between mb-6">
+                            <button
+                                onClick={() => onNavigate('home')}
+                                className="px-4 py-2 bg-white rounded-lg shadow hover:shadow-md transition-shadow"
+                            >
+                                ← 홈으로
+                            </button>
+                            <h2 className="text-2xl font-bold text-gray-800">게임 설정</h2>
+                            <div className="w-20"></div>
+                        </div>
+
+                        <div className="bg-white rounded-2xl shadow-xl p-8 space-y-6">
+                            {/* 난이도 프리셋 */}
+                            <div>
+                                <h3 className="text-xl font-bold text-gray-800 mb-4">⭐ 난이도 프리셋</h3>
+                                <div className="grid grid-cols-3 gap-4">
+                                    <button
+                                        onClick={() => applyPreset('beginner')}
+                                        className="p-4 bg-green-100 hover:bg-green-200 rounded-lg transition-colors"
+                                    >
+                                        <div className="text-3xl mb-2">🟢</div>
+                                        <div className="font-bold text-green-800">초급</div>
+                                        <div className="text-sm text-gray-600">BPM 100</div>
+                                    </button>
+                                    <button
+                                        onClick={() => applyPreset('intermediate')}
+                                        className="p-4 bg-yellow-100 hover:bg-yellow-200 rounded-lg transition-colors"
+                                    >
+                                        <div className="text-3xl mb-2">🟡</div>
+                                        <div className="font-bold text-yellow-800">중급</div>
+                                        <div className="text-sm text-gray-600">BPM 120</div>
+                                    </button>
+                                    <button
+                                        onClick={() => applyPreset('advanced')}
+                                        className="p-4 bg-red-100 hover:bg-red-200 rounded-lg transition-colors"
+                                    >
+                                        <div className="text-3xl mb-2">🔴</div>
+                                        <div className="font-bold text-red-800">고급</div>
+                                        <div className="text-sm text-gray-600">BPM 150</div>
+                                    </button>
+                                </div>
+                            </div>
+
+                            {/* BPM 설정 */}
+                            <div>
+                                <label className="block text-lg font-bold text-gray-800 mb-2">
+                                    🎵 속도 (BPM): {settings.bpm}
+                                </label>
+                                <input
+                                    type="range"
+                                    min="60"
+                                    max="180"
+                                    step="10"
+                                    value={settings.bpm}
+                                    onChange={(e) => onSettingsChange({ ...settings, bpm: parseInt(e.target.value) })}
+                                    className="w-full h-3 bg-gray-200 rounded-lg appearance-none cursor-pointer"
+                                />
+                                <div className="flex justify-between text-sm text-gray-600 mt-1">
+                                    <span>느림 (60)</span>
+                                    <span>보통 (120)</span>
+                                    <span>빠름 (180)</span>
+                                </div>
+                            </div>
+
+                            {/* 판정 난이도 */}
+                            <div>
+                                <label className="block text-lg font-bold text-gray-800 mb-2">
+                                    🎯 판정 난이도
+                                </label>
+                                <div className="grid grid-cols-3 gap-4">
+                                    {['easy', 'normal', 'hard'].map((diff) => (
+                                        <button
+                                            key={diff}
+                                            onClick={() => onSettingsChange({ ...settings, difficulty: diff })}
+                                            className={`p-3 rounded-lg font-semibold transition-all ${
+                                                settings.difficulty === diff
+                                                    ? 'bg-blue-500 text-white shadow-lg scale-105'
+                                                    : 'bg-gray-100 text-gray-700 hover:bg-gray-200'
+                                            }`}
+                                        >
+                                            {diff === 'easy' ? '쉬움' : diff === 'normal' ? '보통' : '어려움'}
+                                        </button>
+                                    ))}
+                                </div>
+                            </div>
+
+                            {/* 사운드팩 */}
+                            <div>
+                                <label className="block text-lg font-bold text-gray-800 mb-2">
+                                    🎼 사운드팩
+                                </label>
+                                <div className="grid grid-cols-2 gap-4">
+                                    {[
+                                        { value: 'drum', icon: '🥁', label: '드럼' },
+                                        { value: 'piano', icon: '🎹', label: '피아노' },
+                                        { value: 'space', icon: '🚀', label: '우주선' },
+                                        { value: 'animal', icon: '🐾', label: '동물' }
+                                    ].map(({ value, icon, label }) => (
+                                        <button
+                                            key={value}
+                                            onClick={() => onSettingsChange({ ...settings, soundPack: value })}
+                                            className={`p-4 rounded-lg font-semibold transition-all ${
+                                                settings.soundPack === value
+                                                    ? 'bg-purple-500 text-white shadow-lg scale-105'
+                                                    : 'bg-gray-100 text-gray-700 hover:bg-gray-200'
+                                            }`}
+                                        >
+                                            <div className="text-3xl mb-1">{icon}</div>
+                                            {label}
+                                        </button>
+                                    ))}
+                                </div>
+                            </div>
+
+                            {/* 테마 */}
+                            <div>
+                                <label className="block text-lg font-bold text-gray-800 mb-2">
+                                    🎨 테마
+                                </label>
+                                <div className="grid grid-cols-2 gap-4">
+                                    {[
+                                        { value: 'sky', icon: '☁️', label: '하늘' },
+                                        { value: 'space', icon: '🌌', label: '우주' },
+                                        { value: 'ocean', icon: '🌊', label: '바다' },
+                                        { value: 'forest', icon: '🌲', label: '숲' }
+                                    ].map(({ value, icon, label }) => (
+                                        <button
+                                            key={value}
+                                            onClick={() => onSettingsChange({ ...settings, theme: value })}
+                                            className={`p-4 rounded-lg font-semibold transition-all ${
+                                                settings.theme === value
+                                                    ? 'bg-green-500 text-white shadow-lg scale-105'
+                                                    : 'bg-gray-100 text-gray-700 hover:bg-gray-200'
+                                            }`}
+                                        >
+                                            <div className="text-3xl mb-1">{icon}</div>
+                                            {label}
+                                        </button>
+                                    ))}
+                                </div>
+                            </div>
+
+                            {/* 토글 옵션 */}
+                            <div className="space-y-4">
+                                <div className="flex items-center justify-between p-4 bg-gray-50 rounded-lg">
+                                    <div>
+                                        <div className="font-bold text-gray-800">📳 진동 피드백</div>
+                                        <div className="text-sm text-gray-600">탭할 때 진동을 느껴요</div>
+                                    </div>
+                                    <button
+                                        onClick={() => onSettingsChange({ ...settings, vibration: !settings.vibration })}
+                                        className={`w-14 h-8 rounded-full transition-colors ${
+                                            settings.vibration ? 'bg-blue-500' : 'bg-gray-300'
+                                        }`}
+                                    >
+                                        <div className={`w-6 h-6 bg-white rounded-full transition-transform ${
+                                            settings.vibration ? 'translate-x-7' : 'translate-x-1'
+                                        }`} />
+                                    </button>
+                                </div>
+
+                                <div className="flex items-center justify-between p-4 bg-gray-50 rounded-lg">
+                                    <div>
+                                        <div className="font-bold text-gray-800">👁️ 가이드선</div>
+                                        <div className="text-sm text-gray-600">빛의 고리를 표시해요</div>
+                                    </div>
+                                    <button
+                                        onClick={() => onSettingsChange({ ...settings, guideLine: !settings.guideLine })}
+                                        className={`w-14 h-8 rounded-full transition-colors ${
+                                            settings.guideLine ? 'bg-blue-500' : 'bg-gray-300'
+                                        }`}
+                                    >
+                                        <div className={`w-6 h-6 bg-white rounded-full transition-transform ${
+                                            settings.guideLine ? 'translate-x-7' : 'translate-x-1'
+                                        }`} />
+                                    </button>
+                                </div>
+                            </div>
+
+                            {/* 시작 버튼 */}
+                            <button
+                                onClick={() => onNavigate('game')}
+                                className="w-full py-4 bg-gradient-to-r from-blue-500 to-purple-500 text-white text-xl font-bold rounded-xl hover:from-blue-600 hover:to-purple-600 transition-all shadow-lg hover:shadow-xl"
+                            >
+                                게임 시작하기 🚀
+                            </button>
+                        </div>
+                    </div>
+                </div>
+            );
+        }
+
+        // 게임 화면
+        function GameScreen({ settings, onNavigate, onScoreSubmit }) {
+            const [gameState, setGameState] = useState('ready'); // ready, playing, finished
+            const [score, setScore] = useState(0);
+            const [combo, setCombo] = useState(0);
+            const [maxCombo, setMaxCombo] = useState(0);
+            const [judgements, setJudgements] = useState({ perfect: 0, great: 0, good: 0, miss: 0 });
+            const [currentBeat, setCurrentBeat] = useState(0);
+            const [showJudgement, setShowJudgement] = useState(null);
+            const [rings, setRings] = useState([]);
+            const [targetTime, setTargetTime] = useState(null);
+
+            const beatInterval = 60000 / settings.bpm; // BPM을 ms로 변환
+            const totalBeats = 40; // 총 비트 수
+
+            // 판정 기준 (ms)
+            const judgementTiming = {
+                easy: { perfect: 100, great: 150, good: 200 },
+                normal: { perfect: 75, great: 120, good: 170 },
+                hard: { perfect: 50, great: 100, good: 150 }
+            };
+
+            const timing = judgementTiming[settings.difficulty];
+
+            // 게임 시작
+            const startGame = () => {
+                setGameState('playing');
+                setScore(0);
+                setCombo(0);
+                setMaxCombo(0);
+                setJudgements({ perfect: 0, great: 0, good: 0, miss: 0 });
+                setCurrentBeat(0);
+                setTargetTime(Date.now() + beatInterval);
+            };
+
+            // 게임 로직
+            useEffect(() => {
+                if (gameState !== 'playing') return;
+
+                const interval = setInterval(() => {
+                    setCurrentBeat(prev => {
+                        const next = prev + 1;
+                        if (next >= totalBeats) {
+                            setGameState('finished');
+                            setMaxCombo(Math.max(combo, maxCombo));
+                            return prev;
+                        }
+                        setTargetTime(Date.now() + beatInterval);
+                        
+                        // 가이드 링 추가
+                        if (settings.guideLine) {
+                            setRings(prev => [...prev, { id: Date.now(), startTime: Date.now() }]);
+                        }
+                        
+                        return next;
+                    });
+                }, beatInterval);
+
+                return () => clearInterval(interval);
+            }, [gameState, beatInterval, currentBeat]);
+
+            // 링 애니메이션
+            useEffect(() => {
+                const interval = setInterval(() => {
+                    setRings(prev => prev.filter(ring => Date.now() - ring.startTime < beatInterval));
+                }, 50);
+                return () => clearInterval(interval);
+            }, [beatInterval]);
+
+            // 탭 처리
+            const handleTap = () => {
+                if (gameState !== 'playing' || !targetTime) return;
+
+                const now = Date.now();
+                const diff = Math.abs(now - targetTime);
+
+                let judgement, points;
+                if (diff <= timing.perfect) {
+                    judgement = 'Perfect';
+                    points = 300;
+                    setCombo(prev => prev + 1);
+                    setJudgements(prev => ({ ...prev, perfect: prev.perfect + 1 }));
+                } else if (diff <= timing.great) {
+                    judgement = 'Great';
+                    points = 200;
+                    setCombo(prev => prev + 1);
+                    setJudgements(prev => ({ ...prev, great: prev.great + 1 }));
+                } else if (diff <= timing.good) {
+                    judgement = 'Good';
+                    points = 100;
+                    setCombo(prev => prev + 1);
+                    setJudgements(prev => ({ ...prev, good: prev.good + 1 }));
+                } else {
+                    judgement = 'Miss';
+                    points = 0;
+                    setCombo(0);
+                    setJudgements(prev => ({ ...prev, miss: prev.miss + 1 }));
+                }
+
+                setScore(prev => prev + points + (combo * 10));
+                setMaxCombo(prev => Math.max(prev, combo + 1));
+                setShowJudgement(judgement);
+                
+                // 진동
+                if (settings.vibration && navigator.vibrate) {
+                    navigator.vibrate(judgement === 'Perfect' ? 50 : 20);
+                }
+
+                setTimeout(() => setShowJudgement(null), 500);
+            };
+
+            const themeClass = {
+                sky: 'bg-gradient-sky',
+                space: 'bg-gradient-space',
+                ocean: 'bg-gradient-ocean',
+                forest: 'bg-gradient-forest'
+            }[settings.theme];
+
+            if (gameState === 'finished') {
+                return (
+                    <div className={`min-h-screen ${themeClass} flex items-center justify-center p-6`}>
+                        <div className="bg-white rounded-2xl shadow-2xl p-8 max-w-md w-full">
+                            <h2 className="text-3xl font-bold text-center mb-6">🎉 게임 완료!</h2>
+                            
+                            <div className="space-y-4 mb-6">
+                                <div className="bg-blue-50 p-4 rounded-lg">
+                                    <div className="text-sm text-gray-600">최종 점수</div>
+                                    <div className="text-3xl font-bold text-blue-600">{score.toLocaleString()}</div>
+                                </div>
+                                
+                                <div className="bg-purple-50 p-4 rounded-lg">
+                                    <div className="text-sm text-gray-600">최대 콤보</div>
+                                    <div className="text-2xl font-bold text-purple-600">{maxCombo}</div>
+                                </div>
+
+                                <div className="bg-gray-50 p-4 rounded-lg space-y-2">
+                                    <div className="flex justify-between">
+                                        <span className="text-pink-600 font-semibold">Perfect:</span>
+                                        <span>{judgements.perfect}</span>
+                                    </div>
+                                    <div className="flex justify-between">
+                                        <span className="text-blue-600 font-semibold">Great:</span>
+                                        <span>{judgements.great}</span>
+                                    </div>
+                                    <div className="flex justify-between">
+                                        <span className="text-green-600 font-semibold">Good:</span>
+                                        <span>{judgements.good}</span>
+                                    </div>
+                                    <div className="flex justify-between">
+                                        <span className="text-gray-600 font-semibold">Miss:</span>
+                                        <span>{judgements.miss}</span>
+                                    </div>
+                                </div>
+                            </div>
+
+                            <div className="space-y-3">
+                                <button
+                                    onClick={startGame}
+                                    className="w-full py-3 bg-blue-500 text-white font-bold rounded-lg hover:bg-blue-600 transition-all"
+                                >
+                                    다시 하기
+                                </button>
+                                <button
+                                    onClick={() => onNavigate('settings')}
+                                    className="w-full py-3 bg-purple-500 text-white font-bold rounded-lg hover:bg-purple-600 transition-all"
+                                >
+                                    설정 변경
+                                </button>
+                                <button
+                                    onClick={() => {
+                                        onScoreSubmit({ score, maxCombo, judgements });
+                                        onNavigate('home');
+                                    }}
+                                    className="w-full py-3 bg-gray-500 text-white font-bold rounded-lg hover:bg-gray-600 transition-all"
+                                >
+                                    홈으로
+                                </button>
+                            </div>
+                        </div>
+                    </div>
+                );
+            }
+
+            return (
+                <div className={`min-h-screen ${themeClass} flex flex-col`}>
+                    {/* 상단 정보 */}
+                    <div className="bg-white/90 backdrop-blur-sm p-4 shadow-lg">
+                        <div className="max-w-4xl mx-auto flex items-center justify-between">
+                            <button
+                                onClick={() => {
+                                    if (confirm('게임을 종료하시겠습니까?')) {
+                                        onNavigate('home');
+                                    }
+                                }}
+                                className="px-4 py-2 bg-red-500 text-white rounded-lg hover:bg-red-600 transition-all"
+                            >
+                                종료
+                            </button>
+                            
+                            <div className="flex items-center space-x-6">
+                                <div className="text-center">
+                                    <div className="text-sm text-gray-600">BPM</div>
+                                    <div className="text-xl font-bold">{settings.bpm}</div>
+                                </div>
+                                <div className="text-center">
+                                    <div className="text-sm text-gray-600">점수</div>
+                                    <div className="text-xl font-bold text-blue-600">{score}</div>
+                                </div>
+                                <div className="text-center">
+                                    <div className="text-sm text-gray-600">콤보</div>
+                                    <div className="text-xl font-bold text-purple-600">{combo}</div>
+                                </div>
+                                <div className="text-center">
+                                    <div className="text-sm text-gray-600">진행</div>
+                                    <div className="text-xl font-bold">{currentBeat}/{totalBeats}</div>
+                                </div>
+                            </div>
+
+                            <div className="w-20"></div>
+                        </div>
+                    </div>
+
+                    {/* 게임 영역 */}
+                    <div className="flex-1 flex items-center justify-center relative">
+                        {gameState === 'ready' && (
+                            <div className="text-center">
+                                <h2 className="text-4xl font-bold text-white mb-8">준비되셨나요?</h2>
+                                <button
+                                    onClick={startGame}
+                                    className="px-12 py-6 bg-white text-2xl font-bold rounded-2xl shadow-2xl hover:scale-105 transition-transform"
+                                >
+                                    시작하기!
+                                </button>
+                            </div>
+                        )}
+
+                        {gameState === 'playing' && (
+                            <div className="relative">
+                                {/* 가이드 링들 */}
+                                {settings.guideLine && rings.map(ring => {
+                                    const elapsed = Date.now() - ring.startTime;
+                                    const progress = elapsed / beatInterval;
+                                    const scale = 3 - (progress * 2);
+                                    const opacity = 1 - progress;
+                                    
+                                    return (
+                                        <div
+                                            key={ring.id}
+                                            className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 rounded-full border-4 border-white/50"
+                                            style={{
+                                                width: `${scale * 80}px`,
+                                                height: `${scale * 80}px`,
+                                                opacity: opacity
+                                            }}
+                                        />
+                                    );
+                                })}
+
+                                {/* 중앙 타겟 */}
+                                <div className="relative">
+                                    <div className="w-40 h-40 rounded-full bg-white/20 backdrop-blur-sm border-4 border-white shadow-2xl" />
+                                    
+                                    {/* 판정 텍스트 */}
+                                    {showJudgement && (
+                                        <div className={`absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 text-3xl font-bold ${
+                                            showJudgement === 'Perfect' ? 'text-pink-400' :
+                                            showJudgement === 'Great' ? 'text-blue-400' :
+                                            showJudgement === 'Good' ? 'text-green-400' :
+                                            'text-gray-400'
+                                        } animate-bounce`}>
+                                            {showJudgement}
+                                        </div>
+                                    )}
+                                </div>
+                            </div>
+                        )}
+                    </div>
+
+                    {/* 탭 버튼 */}
+                    {gameState === 'playing' && (
+                        <div className="p-8 pb-12">
+                            <button
+                                onClick={handleTap}
+                                className="w-full py-8 bg-white/90 backdrop-blur-sm text-2xl font-bold rounded-2xl shadow-2xl active:scale-95 transition-transform"
+                            >
+                                여기를 탭! 👆
+                            </button>
+                        </div>
+                    )}
+                </div>
+            );
+        }
+
+        // 미니게임 화면 (소리 맞히기)
+        function MiniGameScreen({ onNavigate }) {
+            const [currentQuestion, setCurrentQuestion] = useState(0);
+            const [score, setScore] = useState(0);
+            const [answered, setAnswered] = useState(false);
+            const [selectedAnswer, setSelectedAnswer] = useState(null);
+
+            const questions = [
+                {
+                    question: "이 소리는 무엇일까요?",
+                    sound: "빗소리",
+                    description: "쪼로롱 쪼로롱",
+                    options: ["빗소리", "강아지", "드럼", "피아노"],
+                    correct: 0,
+                    explanation: "빗방울이 떨어지는 소리는 불규칙한 리듬을 만들어냅니다."
+                },
+                {
+                    question: "이 소리는 무엇일까요?",
+                    sound: "강아지 짖는 소리",
+                    description: "멍멍!",
+                    options: ["고양이", "강아지", "새", "사자"],
+                    correct: 1,
+                    explanation: "강아지의 성대가 빠르게 진동하면서 만들어진 소리입니다."
+                },
+                {
+                    question: "이 소리는 무엇일까요?",
+                    sound: "드럼 소리",
+                    description: "둥! 둥!",
+                    options: ["기타", "피아노", "드럼", "트럼펫"],
+                    correct: 2,
+                    explanation: "드럼의 막이 진동하면서 만들어진 소리입니다."
+                }
+            ];
+
+            const handleAnswer = (index) => {
+                if (answered) return;
+                
+                setSelectedAnswer(index);
+                setAnswered(true);
+                
+                if (index === questions[currentQuestion].correct) {
+                    setScore(prev => prev + 100);
+                }
+            };
+
+            const nextQuestion = () => {
+                if (currentQuestion < questions.length - 1) {
+                    setCurrentQuestion(prev => prev + 1);
+                    setAnswered(false);
+                    setSelectedAnswer(null);
+                }
+            };
+
+            const restart = () => {
+                setCurrentQuestion(0);
+                setScore(0);
+                setAnswered(false);
+                setSelectedAnswer(null);
+            };
+
+            const q = questions[currentQuestion];
+            const isFinished = answered && currentQuestion === questions.length - 1;
+
+            return (
+                <div className="min-h-screen bg-gradient-to-br from-orange-100 to-pink-100 p-6">
+                    <div className="max-w-2xl mx-auto">
+                        {/* 헤더 */}
+                        <div className="flex items-center justify-between mb-6">
+                            <button
+                                onClick={() => onNavigate('home')}
+                                className="px-4 py-2 bg-white rounded-lg shadow hover:shadow-md transition-shadow"
+                            >
+                                ← 홈으로
+                            </button>
+                            <h2 className="text-2xl font-bold text-gray-800">소리 맞히기 게임</h2>
+                            <div className="text-xl font-bold text-orange-600">점수: {score}</div>
+                        </div>
+
+                        {!isFinished ? (
+                            <div className="bg-white rounded-2xl shadow-xl p-8">
+                                {/* 진행도 */}
+                                <div className="mb-6">
+                                    <div className="flex justify-between text-sm text-gray-600 mb-2">
+                                        <span>문제 {currentQuestion + 1}</span>
+                                        <span>{currentQuestion + 1} / {questions.length}</span>
+                                    </div>
+                                    <div className="h-2 bg-gray-200 rounded-full overflow-hidden">
+                                        <div 
+                                            className="h-full bg-orange-500 transition-all duration-500"
+                                            style={{ width: `${((currentQuestion + 1) / questions.length) * 100}%` }}
+                                        />
+                                    </div>
+                                </div>
+
+                                {/* 질문 */}
+                                <div className="text-center mb-8">
+                                    <h3 className="text-2xl font-bold text-gray-800 mb-4">{q.question}</h3>
+                                    <div className="text-6xl mb-4">🔊</div>
+                                    <div className="text-xl text-gray-600 italic">"{q.description}"</div>
+                                </div>
+
+                                {/* 선택지 */}
+                                <div className="grid grid-cols-2 gap-4 mb-6">
+                                    {q.options.map((option, index) => (
+                                        <button
+                                            key={index}
+                                            onClick={() => handleAnswer(index)}
+                                            disabled={answered}
+                                            className={`p-6 rounded-xl text-lg font-semibold transition-all ${
+                                                answered
+                                                    ? index === q.correct
+                                                        ? 'bg-green-500 text-white scale-105'
+                                                        : index === selectedAnswer
+                                                        ? 'bg-red-500 text-white'
+                                                        : 'bg-gray-200 text-gray-500'
+                                                    : 'bg-blue-100 hover:bg-blue-200 text-gray-800'
+                                            }`}
+                                        >
+                                            {option}
+                                        </button>
+                                    ))}
+                                </div>
+
+                                {/* 설명 */}
+                                {answered && (
+                                    <div className="bg-blue-50 p-4 rounded-lg mb-6">
+                                        <div className="font-bold text-blue-800 mb-2">
+                                            {selectedAnswer === q.correct ? '✅ 정답입니다!' : '❌ 아쉽네요!'}
+                                        </div>
+                                        <p className="text-gray-700">{q.explanation}</p>
+                                    </div>
+                                )}
+
+                                {/* 다음 버튼 */}
+                                {answered && currentQuestion < questions.length - 1 && (
+                                    <button
+                                        onClick={nextQuestion}
+                                        className="w-full py-4 bg-orange-500 text-white text-xl font-bold rounded-xl hover:bg-orange-600 transition-all"
+                                    >
+                                        다음 문제 →
+                                    </button>
+                                )}
+                            </div>
+                        ) : (
+                            <div className="bg-white rounded-2xl shadow-xl p-8 text-center">
+                                <h3 className="text-3xl font-bold text-gray-800 mb-6">🎉 완료!</h3>
+                                <div className="text-6xl mb-4">
+                                    {score === questions.length * 100 ? '🏆' : score >= questions.length * 66 ? '⭐' : '👍'}
+                                </div>
+                                <div className="text-4xl font-bold text-orange-600 mb-2">{score}점</div>
+                                <div className="text-gray-600 mb-8">
+                                    {score === questions.length * 100 
+                                        ? '완벽해요! 소리 박사님!' 
+                                        : score >= questions.length * 66 
+                                        ? '잘했어요!' 
+                                        : '좋아요! 다시 도전해봐요!'}
+                                </div>
+                                <div className="space-y-3">
+                                    <button
+                                        onClick={restart}
+                                        className="w-full py-3 bg-orange-500 text-white font-bold rounded-lg hover:bg-orange-600 transition-all"
+                                    >
+                                        다시 하기
+                                    </button>
+                                    <button
+                                        onClick={() => onNavigate('home')}
+                                        className="w-full py-3 bg-gray-500 text-white font-bold rounded-lg hover:bg-gray-600 transition-all"
+                                    >
+                                        홈으로
+                                    </button>
+                                </div>
+                            </div>
+                        )}
+                    </div>
+                </div>
+            );
+        }
+
+        // 가족 대항전 화면
+        function TeamBattleScreen({ scores, onNavigate }) {
+            const [teams, setTeams] = useState([
+                { name: '1팀', score: 0, combo: 0 },
+                { name: '2팀', score: 0, combo: 0 },
+                { name: '3팀', score: 0, combo: 0 }
+            ]);
+            const [currentTeam, setCurrentTeam] = useState(0);
+
+            const updateTeamScore = (teamIndex, score, combo) => {
+                setTeams(prev => prev.map((team, i) => 
+                    i === teamIndex ? { ...team, score, combo } : team
+                ));
+            };
+
+            const sortedTeams = [...teams].sort((a, b) => b.score - a.score);
+            const winner = sortedTeams[0];
+
+            return (
+                <div className="min-h-screen bg-gradient-to-br from-red-100 to-orange-100 p-6">
+                    <div className="max-w-4xl mx-auto">
+                        {/* 헤더 */}
+                        <div className="flex items-center justify-between mb-6">
+                            <button
+                                onClick={() => onNavigate('home')}
+                                className="px-4 py-2 bg-white rounded-lg shadow hover:shadow-md transition-shadow"
+                            >
+                                ← 홈으로
+                            </button>
+                            <h2 className="text-2xl font-bold text-gray-800">🏆 가족 대항전</h2>
+                            <div className="w-20"></div>
+                        </div>
+
+                        {/* 점수판 */}
+                        <div className="bg-white rounded-2xl shadow-xl p-8 mb-6">
+                            <h3 className="text-2xl font-bold text-center mb-6">점수판</h3>
+                            <div className="space-y-4">
+                                {sortedTeams.map((team, index) => (
+                                    <div
+                                        key={team.name}
+                                        className={`p-6 rounded-xl flex items-center justify-between ${
+                                            index === 0 
+                                                ? 'bg-yellow-100 border-4 border-yellow-400' 
+                                                : 'bg-gray-50'
+                                        }`}
+                                    >
+                                        <div className="flex items-center space-x-4">
+                                            <span className="text-3xl">
+                                                {index === 0 ? '🥇' : index === 1 ? '🥈' : index === 2 ? '🥉' : ''}
+                                            </span>
+                                            <div>
+                                                <div className="text-xl font-bold">{team.name}</div>
+                                                <div className="text-sm text-gray-600">최대 콤보: {team.combo}</div>
+                                            </div>
+                                        </div>
+                                        <div className="text-3xl font-bold text-blue-600">
+                                            {team.score.toLocaleString()}
+                                        </div>
+                                    </div>
+                                ))}
+                            </div>
+
+                            {winner.score > 0 && (
+                                <div className="mt-8 text-center">
+                                    <div className="text-4xl mb-2">🎉</div>
+                                    <div className="text-2xl font-bold text-gray-800">
+                                        축하합니다! {winner.name} 우승!
+                                    </div>
+                                    <div className="text-gray-600 mt-2">
+                                        리듬 마스터 칭호를 드립니다! ⭐
+                                    </div>
+                                </div>
+                            )}
+                        </div>
+
+                        {/* 규칙 안내 */}
+                        <div className="bg-white rounded-2xl shadow-xl p-8 mb-6">
+                            <h3 className="text-xl font-bold mb-4">📋 대결 규칙</h3>
+                            <ul className="space-y-2 text-gray-700">
+                                <li className="flex items-start">
+                                    <span className="mr-2">•</span>
+                                    <span>공정하게: 모든 팀은 같은 난이도로 시작해요</span>
+                                </li>
+                                <li className="flex items-start">
+                                    <span className="mr-2">•</span>
+                                    <span>안전하게: 차례를 지켜주세요</span>
+                                </li>
+                                <li className="flex items-start">
+                                    <span className="mr-2">•</span>
+                                    <span>응원하며: 함께 응원해요!</span>
+                                </li>
+                            </ul>
+                        </div>
+
+                        {/* 게임 시작 */}
+                        <div className="space-y-3">
+                            <button
+                                onClick={() => onNavigate('game')}
+                                className="w-full py-4 bg-gradient-to-r from-red-500 to-orange-500 text-white text-xl font-bold rounded-xl hover:from-red-600 hover:to-orange-600 transition-all shadow-lg"
+                            >
+                                게임 시작하기 🎮
+                            </button>
+                            <button
+                                onClick={() => setTeams([
+                                    { name: '1팀', score: 0, combo: 0 },
+                                    { name: '2팀', score: 0, combo: 0 },
+                                    { name: '3팀', score: 0, combo: 0 }
+                                ])}
+                                className="w-full py-3 bg-gray-500 text-white font-bold rounded-xl hover:bg-gray-600 transition-all"
+                            >
+                                점수판 초기화
+                            </button>
+                        </div>
+
+                        <p className="text-center text-gray-600 mt-6">
+                            가족이 함께하는 리듬 대결! 모두가 챔피언입니다. 💖
+                        </p>
+                    </div>
+                </div>
+            );
+        }
+
+        // 앱 렌더링
+        ReactDOM.render(<App />, document.getElementById('root'));
+    </script>
+</body>
+</html>
