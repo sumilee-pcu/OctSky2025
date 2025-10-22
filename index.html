@@ -806,7 +806,7 @@
                 setMaxCombo(0);
                 setJudgements({ perfect: 0, great: 0, good: 0, miss: 0 });
                 setCurrentBeat(0);
-                setTargetTime(Date.now() + beatInterval);
+                setTargetTime(Date.now());
             };
 
             // 게임 로직
@@ -821,7 +821,9 @@
                             setMaxCombo(Math.max(combo, maxCombo));
                             return prev;
                         }
-                        setTargetTime(Date.now() + beatInterval);
+
+                        // 다음 비트의 목표 시간 설정
+                        setTargetTime(Date.now());
 
                         // 비트 소리 재생
                         soundSystem.playSound(settings.soundPack, 'beat');
