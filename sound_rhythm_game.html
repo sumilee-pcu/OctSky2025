@@ -242,7 +242,7 @@
         function App() {
             const [currentScreen, setCurrentScreen] = useState('home');
             const [gameSettings, setGameSettings] = useState({
-                bpm: 120,
+                bpm: 80,
                 difficulty: 'easy',
                 soundPack: 'drum',
                 theme: 'sky',
@@ -566,9 +566,9 @@
         // 설정 화면
         function SettingsScreen({ settings, onSettingsChange, onNavigate }) {
             const presets = {
-                beginner: { bpm: 100, difficulty: 'easy', guideLine: true },
-                intermediate: { bpm: 120, difficulty: 'normal', guideLine: true },
-                advanced: { bpm: 150, difficulty: 'hard', guideLine: false }
+                beginner: { bpm: 80, difficulty: 'easy', guideLine: true },
+                intermediate: { bpm: 110, difficulty: 'normal', guideLine: true },
+                advanced: { bpm: 140, difficulty: 'hard', guideLine: false }
             };
 
             const applyPreset = (preset) => {
@@ -601,7 +601,7 @@
                                     >
                                         <div className="text-3xl mb-2">🟢</div>
                                         <div className="font-bold text-green-800">초급</div>
-                                        <div className="text-sm text-gray-600">BPM 100</div>
+                                        <div className="text-sm text-gray-600">BPM 80</div>
                                     </button>
                                     <button
                                         onClick={() => applyPreset('intermediate')}
@@ -609,7 +609,7 @@
                                     >
                                         <div className="text-3xl mb-2">🟡</div>
                                         <div className="font-bold text-yellow-800">중급</div>
-                                        <div className="text-sm text-gray-600">BPM 120</div>
+                                        <div className="text-sm text-gray-600">BPM 110</div>
                                     </button>
                                     <button
                                         onClick={() => applyPreset('advanced')}
@@ -617,7 +617,7 @@
                                     >
                                         <div className="text-3xl mb-2">🔴</div>
                                         <div className="font-bold text-red-800">고급</div>
-                                        <div className="text-sm text-gray-600">BPM 150</div>
+                                        <div className="text-sm text-gray-600">BPM 140</div>
                                     </button>
                                 </div>
                             </div>
@@ -789,11 +789,11 @@
             const beatInterval = 60000 / settings.bpm; // BPM을 ms로 변환
             const totalBeats = 40; // 총 비트 수
 
-            // 판정 기준 (ms)
+            // 판정 기준 (ms) - 더 여유롭게 조정
             const judgementTiming = {
-                easy: { perfect: 100, great: 150, good: 200 },
-                normal: { perfect: 75, great: 120, good: 170 },
-                hard: { perfect: 50, great: 100, good: 150 }
+                easy: { perfect: 200, great: 300, good: 400 },
+                normal: { perfect: 150, great: 250, good: 350 },
+                hard: { perfect: 100, great: 180, good: 280 }
             };
 
             const timing = judgementTiming[settings.difficulty];
