@@ -784,16 +784,17 @@
             const [currentBeat, setCurrentBeat] = useState(0);
             const [showJudgement, setShowJudgement] = useState(null);
             const [rings, setRings] = useState([]);
-            const [targetTime, setTargetTime] = useState(null);
+            const lastBeatTimeRef = useRef(null);
+            const gameStartTimeRef = useRef(null);
 
             const beatInterval = 60000 / settings.bpm; // BPM을 ms로 변환
-            const totalBeats = 40; // 총 비트 수
+            const totalBeats = 30; // 총 비트 수
 
-            // 판정 기준 (ms) - 더 여유롭게 조정
+            // 판정 기준 (ms) - 적당히 쉽게
             const judgementTiming = {
-                easy: { perfect: 200, great: 300, good: 400 },
-                normal: { perfect: 150, great: 250, good: 350 },
-                hard: { perfect: 100, great: 180, good: 280 }
+                easy: { perfect: 300, great: 500, good: 700 },
+                normal: { perfect: 250, great: 400, good: 550 },
+                hard: { perfect: 200, great: 350, good: 500 }
             };
 
             const timing = judgementTiming[settings.difficulty];
@@ -806,7 +807,16 @@
                 setMaxCombo(0);
                 setJudgements({ perfect: 0, great: 0, good: 0, miss: 0 });
                 setCurrentBeat(0);
-                setTargetTime(Date.now());
+                setRings([]);
+                const now = Date.now();
+                gameStartTimeRef.current = now;
+                lastBeatTimeRef.current = now;
+
+                // 첫 비트 소리
+                soundSystem.playSound(settings.soundPack, 'beat');
+                if (settings.guideLine) {
+                    setRings([{ id: now, startTime: now }]);
+                }
             };
 
             // 게임 로직
@@ -818,19 +828,19 @@
                         const next = prev + 1;
                         if (next >= totalBeats) {
                             setGameState('finished');
-                            setMaxCombo(Math.max(combo, maxCombo));
                             return prev;
                         }
 
-                        // 다음 비트의 목표 시간 설정
-                        setTargetTime(Date.now());
+                        // 현재 비트 시간 기록
+                        const now = Date.now();
+                        lastBeatTimeRef.current = now;
 
                         // 비트 소리 재생
                         soundSystem.playSound(settings.soundPack, 'beat');
 
                         // 가이드 링 추가
                         if (settings.guideLine) {
-                            setRings(prev => [...prev, { id: Date.now(), startTime: Date.now() }]);
+                            setRings(prev => [...prev, { id: now, startTime: now }]);
                         }
 
                         return next;
@@ -838,52 +848,56 @@
                 }, beatInterval);
 
                 return () => clearInterval(interval);
-            }, [gameState, beatInterval, currentBeat, settings.soundPack]);
+            }, [gameState, beatInterval, settings.soundPack, settings.guideLine]);
+
+            // maxCombo 업데이트
+            useEffect(() => {
+                setMaxCombo(prev => Math.max(prev, combo));
+            }, [combo]);
 
             // 링 애니메이션
             useEffect(() => {
+                if (gameState !== 'playing') return;
                 const interval = setInterval(() => {
                     setRings(prev => prev.filter(ring => Date.now() - ring.startTime < beatInterval));
                 }, 50);
                 return () => clearInterval(interval);
-            }, [beatInterval]);
+            }, [gameState, beatInterval]);
 
             // 탭 처리
             const handleTap = () => {
-                if (gameState !== 'playing' || !targetTime) return;
+                if (gameState !== 'playing' || !lastBeatTimeRef.current) return;
 
                 const now = Date.now();
-                const diff = Math.abs(now - targetTime);
+                const diff = Math.abs(now - lastBeatTimeRef.current);
 
                 let judgement, points;
                 if (diff <= timing.perfect) {
                     judgement = 'Perfect';
                     points = 300;
-                    setCombo(prev => prev + 1);
-                    setJudgements(prev => ({ ...prev, perfect: prev.perfect + 1 }));
-                    soundSystem.playSound(settings.soundPack, 'perfect');
                 } else if (diff <= timing.great) {
                     judgement = 'Great';
                     points = 200;
-                    setCombo(prev => prev + 1);
-                    setJudgements(prev => ({ ...prev, great: prev.great + 1 }));
-                    soundSystem.playSound(settings.soundPack, 'great');
                 } else if (diff <= timing.good) {
                     judgement = 'Good';
                     points = 100;
-                    setCombo(prev => prev + 1);
-                    setJudgements(prev => ({ ...prev, good: prev.good + 1 }));
-                    soundSystem.playSound(settings.soundPack, 'good');
                 } else {
                     judgement = 'Miss';
                     points = 0;
+                }
+
+                // 즉시 상태 업데이트
+                if (judgement !== 'Miss') {
+                    setCombo(prev => prev + 1);
+                    setScore(prev => prev + points + (combo * 10));
+                    setJudgements(prev => ({ ...prev, [judgement.toLowerCase()]: prev[judgement.toLowerCase()] + 1 }));
+                    soundSystem.playSound(settings.soundPack, judgement.toLowerCase());
+                } else {
                     setCombo(0);
                     setJudgements(prev => ({ ...prev, miss: prev.miss + 1 }));
                     soundSystem.playSound(settings.soundPack, 'miss');
                 }
 
-                setScore(prev => prev + points + (combo * 10));
-                setMaxCombo(prev => Math.max(prev, combo + 1));
                 setShowJudgement(judgement);
 
                 // 진동
