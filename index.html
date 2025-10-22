@@ -8,6 +8,9 @@
     <script crossorigin src="https://unpkg.com/react-dom@18/umd/react-dom.production.min.js"></script>
     <script src="https://unpkg.com/@babel/standalone/babel.min.js"></script>
     <script src="https://cdn.tailwindcss.com"></script>
+
+    <!-- Supabase -->
+    <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
     <style>
         @keyframes wave {
             0%, 100% { transform: scale(1); opacity: 1; }
@@ -50,6 +53,103 @@
 
     <script type="text/babel">
         const { useState, useEffect, useRef } = React;
+
+        // Supabase 초기화 (데모용 공개 프로젝트)
+        const SUPABASE_URL = 'https://xyzcompany.supabase.co';
+        const SUPABASE_ANON_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Inh5emNvbXBhbnkiLCJyb2xlIjoiYW5vbiIsImlhdCI6MTYxNjQzMjAwMCwiZXhwIjoxOTMxOTkyMDAwfQ.demo-key-for-oct-sky-2025';
+
+        const supabase = window.supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
+
+        // 데이터베이스 헬퍼 함수들
+        const DB = {
+            // 세션 ID 가져오기 또는 생성
+            getSessionId() {
+                let sessionId = localStorage.getItem('octsky_session_id');
+                if (!sessionId) {
+                    sessionId = 'session_' + Date.now() + '_' + Math.random().toString(36).substr(2, 9);
+                    localStorage.setItem('octsky_session_id', sessionId);
+                }
+                return sessionId;
+            },
+
+            // 팀 점수 가져오기
+            async getTeams(sessionId) {
+                try {
+                    const { data, error } = await supabase
+                        .from('team_scores')
+                        .select('*')
+                        .eq('session_id', sessionId)
+                        .order('team_index', { ascending: true });
+
+                    if (error) throw error;
+                    return data || [];
+                } catch (err) {
+                    console.error('Error getting teams:', err);
+                    return [];
+                }
+            },
+
+            // 팀 점수 업데이트
+            async updateTeam(sessionId, teamIndex, teamData) {
+                try {
+                    const { data, error } = await supabase
+                        .from('team_scores')
+                        .upsert({
+                            session_id: sessionId,
+                            team_index: teamIndex,
+                            team_name: teamData.name,
+                            score: teamData.score,
+                            combo: teamData.combo,
+                            updated_at: new Date().toISOString()
+                        }, {
+                            onConflict: 'session_id,team_index'
+                        });
+
+                    if (error) throw error;
+                    return true;
+                } catch (err) {
+                    console.error('Error updating team:', err);
+                    return false;
+                }
+            },
+
+            // 팀 점수 초기화
+            async resetTeams(sessionId) {
+                try {
+                    const { error } = await supabase
+                        .from('team_scores')
+                        .delete()
+                        .eq('session_id', sessionId);
+
+                    if (error) throw error;
+                    return true;
+                } catch (err) {
+                    console.error('Error resetting teams:', err);
+                    return false;
+                }
+            },
+
+            // 실시간 구독
+            subscribeToTeams(sessionId, callback) {
+                const channel = supabase
+                    .channel('team_scores_changes')
+                    .on(
+                        'postgres_changes',
+                        {
+                            event: '*',
+                            schema: 'public',
+                            table: 'team_scores',
+                            filter: `session_id=eq.${sessionId}`
+                        },
+                        (payload) => {
+                            callback(payload);
+                        }
+                    )
+                    .subscribe();
+
+                return channel;
+            }
+        };
 
         // 사운드 시스템
         class SoundSystem {
@@ -149,25 +249,40 @@
                 vibration: true,
                 guideLine: true
             });
-            const [teamScores, setTeamScores] = useState([]);
+            const [sessionId, setSessionId] = useState(DB.getSessionId());
+            const [currentTeam, setCurrentTeam] = useState(0);
+
+            const handleScoreSubmit = async (scoreData) => {
+                // 현재 팀에 점수 기록
+                await DB.updateTeam(sessionId, currentTeam, {
+                    name: `${currentTeam + 1}팀`,
+                    score: scoreData.score,
+                    combo: scoreData.maxCombo
+                });
+                // 다음 팀으로 이동
+                setCurrentTeam((prev) => (prev + 1) % 3);
+            };
 
             const screens = {
-                home: <HomeScreen onNavigate={setCurrentScreen} />,
+                home: <HomeScreen onNavigate={setCurrentScreen} sessionId={sessionId} />,
                 learn: <LearnScreen onNavigate={setCurrentScreen} />,
-                settings: <SettingsScreen 
-                    settings={gameSettings} 
+                settings: <SettingsScreen
+                    settings={gameSettings}
                     onSettingsChange={setGameSettings}
-                    onNavigate={setCurrentScreen} 
+                    onNavigate={setCurrentScreen}
                 />,
-                game: <GameScreen 
+                game: <GameScreen
                     settings={gameSettings}
                     onNavigate={setCurrentScreen}
-                    onScoreSubmit={(score) => setTeamScores([...teamScores, score])}
+                    onScoreSubmit={handleScoreSubmit}
+                    currentTeam={currentTeam}
                 />,
                 miniGame: <MiniGameScreen onNavigate={setCurrentScreen} />,
-                teamBattle: <TeamBattleScreen 
-                    scores={teamScores}
+                teamBattle: <TeamBattleScreen
+                    sessionId={sessionId}
                     onNavigate={setCurrentScreen}
+                    currentTeam={currentTeam}
+                    setCurrentTeam={setCurrentTeam}
                 />
             };
 
@@ -179,7 +294,7 @@
         }
 
         // 홈 화면
-        function HomeScreen({ onNavigate }) {
+        function HomeScreen({ onNavigate, sessionId }) {
             return (
                 <div className="min-h-screen bg-gradient-sky flex flex-col items-center justify-center p-6">
                     <div className="text-center mb-12">
@@ -192,6 +307,10 @@
                         <p className="text-xl text-white/90">
                             오늘의 과학자가 내일의 과학자를 만난다!
                         </p>
+                        <div className="mt-4 bg-white/20 backdrop-blur-sm rounded-lg px-4 py-2 inline-block">
+                            <p className="text-sm text-white/80">세션 코드</p>
+                            <p className="text-lg font-mono font-bold text-white">{sessionId.split('_')[1]}</p>
+                        </div>
                     </div>
 
                     <div className="bg-white rounded-2xl shadow-2xl p-8 max-w-md w-full space-y-4">
@@ -656,7 +775,7 @@
         }
 
         // 게임 화면
-        function GameScreen({ settings, onNavigate, onScoreSubmit }) {
+        function GameScreen({ settings, onNavigate, onScoreSubmit, currentTeam }) {
             const [gameState, setGameState] = useState('ready'); // ready, playing, finished
             const [score, setScore] = useState(0);
             const [combo, setCombo] = useState(0);
@@ -860,8 +979,12 @@
                             >
                                 종료
                             </button>
-                            
+
                             <div className="flex items-center space-x-6">
+                                <div className="text-center">
+                                    <div className="text-sm text-gray-600">팀</div>
+                                    <div className="text-xl font-bold text-green-600">{currentTeam + 1}팀</div>
+                                </div>
                                 <div className="text-center">
                                     <div className="text-sm text-gray-600">BPM</div>
                                     <div className="text-xl font-bold">{settings.bpm}</div>
@@ -1134,22 +1257,72 @@
         }
 
         // 가족 대항전 화면
-        function TeamBattleScreen({ scores, onNavigate }) {
+        function TeamBattleScreen({ sessionId, onNavigate, currentTeam, setCurrentTeam }) {
             const [teams, setTeams] = useState([
                 { name: '1팀', score: 0, combo: 0 },
                 { name: '2팀', score: 0, combo: 0 },
                 { name: '3팀', score: 0, combo: 0 }
             ]);
-            const [currentTeam, setCurrentTeam] = useState(0);
+            const [loading, setLoading] = useState(true);
 
-            const updateTeamScore = (teamIndex, score, combo) => {
-                setTeams(prev => prev.map((team, i) => 
-                    i === teamIndex ? { ...team, score, combo } : team
-                ));
+            // 초기 데이터 로드 및 실시간 구독
+            useEffect(() => {
+                // 초기 데이터 로드
+                const loadTeams = async () => {
+                    const data = await DB.getTeams(sessionId);
+                    if (data.length > 0) {
+                        const teamsData = [
+                            { name: '1팀', score: 0, combo: 0 },
+                            { name: '2팀', score: 0, combo: 0 },
+                            { name: '3팀', score: 0, combo: 0 }
+                        ];
+                        data.forEach(item => {
+                            teamsData[item.team_index] = {
+                                name: item.team_name,
+                                score: item.score,
+                                combo: item.combo
+                            };
+                        });
+                        setTeams(teamsData);
+                    }
+                    setLoading(false);
+                };
+
+                loadTeams();
+
+                // 실시간 구독
+                const channel = DB.subscribeToTeams(sessionId, (payload) => {
+                    loadTeams(); // 변경사항 발생 시 다시 로드
+                });
+
+                return () => {
+                    if (channel) {
+                        supabase.removeChannel(channel);
+                    }
+                };
+            }, [sessionId]);
+
+            const handleResetTeams = async () => {
+                if (confirm('정말로 모든 팀의 점수를 초기화하시겠습니까?')) {
+                    await DB.resetTeams(sessionId);
+                    setTeams([
+                        { name: '1팀', score: 0, combo: 0 },
+                        { name: '2팀', score: 0, combo: 0 },
+                        { name: '3팀', score: 0, combo: 0 }
+                    ]);
+                }
             };
 
             const sortedTeams = [...teams].sort((a, b) => b.score - a.score);
             const winner = sortedTeams[0];
+
+            if (loading) {
+                return (
+                    <div className="min-h-screen bg-gradient-to-br from-red-100 to-orange-100 flex items-center justify-center">
+                        <div className="text-2xl font-bold text-gray-800">로딩 중...</div>
+                    </div>
+                );
+            }
 
             return (
                 <div className="min-h-screen bg-gradient-to-br from-red-100 to-orange-100 p-6">
@@ -1227,6 +1400,14 @@
                             </ul>
                         </div>
 
+                        {/* 현재 차례 표시 */}
+                        <div className="bg-white rounded-2xl shadow-xl p-6 mb-6">
+                            <div className="text-center">
+                                <p className="text-gray-600 mb-2">다음 차례</p>
+                                <p className="text-4xl font-bold text-blue-600">{currentTeam + 1}팀</p>
+                            </div>
+                        </div>
+
                         {/* 게임 시작 */}
                         <div className="space-y-3">
                             <button
@@ -1236,11 +1417,7 @@
                                 게임 시작하기 🎮
                             </button>
                             <button
-                                onClick={() => setTeams([
-                                    { name: '1팀', score: 0, combo: 0 },
-                                    { name: '2팀', score: 0, combo: 0 },
-                                    { name: '3팀', score: 0, combo: 0 }
-                                ])}
+                                onClick={handleResetTeams}
                                 className="w-full py-3 bg-gray-500 text-white font-bold rounded-xl hover:bg-gray-600 transition-all"
                             >
                                 점수판 초기화
