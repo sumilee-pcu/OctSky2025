@@ -776,7 +776,7 @@
 
         // 게임 화면
         function GameScreen({ settings, onNavigate, onScoreSubmit, currentTeam }) {
-            const [gameState, setGameState] = useState('ready'); // ready, playing, finished
+            const [gameState, setGameState] = useState('ready'); // ready, playing, paused, finished
             const [score, setScore] = useState(0);
             const [combo, setCombo] = useState(0);
             const [maxCombo, setMaxCombo] = useState(0);
@@ -784,8 +784,10 @@
             const [currentBeat, setCurrentBeat] = useState(0);
             const [showJudgement, setShowJudgement] = useState(null);
             const [rings, setRings] = useState([]);
+            const [showPauseMenu, setShowPauseMenu] = useState(false);
             const lastBeatTimeRef = useRef(null);
             const gameStartTimeRef = useRef(null);
+            const pauseTimeRef = useRef(null);
 
             const beatInterval = 60000 / settings.bpm; // BPM을 ms로 변환
             const totalBeats = 30; // 총 비트 수
@@ -808,6 +810,7 @@
                 setJudgements({ perfect: 0, great: 0, good: 0, miss: 0 });
                 setCurrentBeat(0);
                 setRings([]);
+                setShowPauseMenu(false);
                 const now = Date.now();
                 gameStartTimeRef.current = now;
                 lastBeatTimeRef.current = now;
@@ -817,6 +820,28 @@
                 if (settings.guideLine) {
                     setRings([{ id: now, startTime: now }]);
                 }
+            };
+
+            // 일시정지
+            const pauseGame = () => {
+                setGameState('paused');
+                setShowPauseMenu(true);
+                pauseTimeRef.current = Date.now();
+            };
+
+            // 계속하기
+            const resumeGame = () => {
+                const pauseDuration = Date.now() - pauseTimeRef.current;
+                lastBeatTimeRef.current += pauseDuration;
+                setGameState('playing');
+                setShowPauseMenu(false);
+            };
+
+            // 게임 종료
+            const quitGame = () => {
+                setGameState('ready');
+                setShowPauseMenu(false);
+                onNavigate('home');
             };
 
             // 게임 로직
@@ -983,18 +1008,61 @@
 
             return (
                 <div className={`min-h-screen ${themeClass} flex flex-col`}>
+                    {/* 일시정지 메뉴 */}
+                    {showPauseMenu && (
+                        <div className="fixed inset-0 bg-black/70 flex items-center justify-center z-50">
+                            <div className="bg-white rounded-2xl shadow-2xl p-8 max-w-md w-full mx-4">
+                                <h2 className="text-3xl font-bold text-center mb-6">⏸️ 일시정지</h2>
+
+                                <div className="space-y-4 mb-6">
+                                    <div className="bg-gray-50 p-4 rounded-lg">
+                                        <div className="flex justify-between mb-2">
+                                            <span className="text-gray-600">현재 점수</span>
+                                            <span className="font-bold text-blue-600">{score}</span>
+                                        </div>
+                                        <div className="flex justify-between mb-2">
+                                            <span className="text-gray-600">콤보</span>
+                                            <span className="font-bold text-purple-600">{combo}</span>
+                                        </div>
+                                        <div className="flex justify-between">
+                                            <span className="text-gray-600">진행</span>
+                                            <span className="font-bold">{currentBeat}/{totalBeats}</span>
+                                        </div>
+                                    </div>
+                                </div>
+
+                                <div className="space-y-3">
+                                    <button
+                                        onClick={resumeGame}
+                                        className="w-full py-4 bg-green-500 text-white text-xl font-bold rounded-lg hover:bg-green-600 transition-all"
+                                    >
+                                        ▶️ 계속하기
+                                    </button>
+                                    <button
+                                        onClick={startGame}
+                                        className="w-full py-3 bg-blue-500 text-white font-bold rounded-lg hover:bg-blue-600 transition-all"
+                                    >
+                                        🔄 다시 시작
+                                    </button>
+                                    <button
+                                        onClick={quitGame}
+                                        className="w-full py-3 bg-gray-500 text-white font-bold rounded-lg hover:bg-gray-600 transition-all"
+                                    >
+                                        🏠 홈으로
+                                    </button>
+                                </div>
+                            </div>
+                        </div>
+                    )}
+
                     {/* 상단 정보 */}
                     <div className="bg-white/90 backdrop-blur-sm p-4 shadow-lg">
                         <div className="max-w-4xl mx-auto flex items-center justify-between">
                             <button
-                                onClick={() => {
-                                    if (confirm('게임을 종료하시겠습니까?')) {
-                                        onNavigate('home');
-                                    }
-                                }}
-                                className="px-4 py-2 bg-red-500 text-white rounded-lg hover:bg-red-600 transition-all"
+                                onClick={gameState === 'playing' ? pauseGame : () => onNavigate('home')}
+                                className="px-4 py-2 bg-orange-500 text-white rounded-lg hover:bg-orange-600 transition-all"
                             >
-                                종료
+                                {gameState === 'playing' ? '⏸️ 일시정지' : '← 뒤로가기'}
                             </button>
 
                             <div className="flex items-center space-x-6">
