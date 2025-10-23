@@ -165,7 +165,7 @@
             }
 
             // 주파수로 소리 생성
-            playTone(frequency, duration = 0.15, type = 'sine') {
+            playTone(frequency, duration = 0.15, type = 'sine', volume = 0.3) {
                 this.init();
                 const oscillator = this.audioContext.createOscillator();
                 const gainNode = this.audioContext.createGain();
@@ -176,7 +176,7 @@
                 oscillator.frequency.value = frequency;
                 oscillator.type = type;
 
-                gainNode.gain.setValueAtTime(0.3, this.audioContext.currentTime);
+                gainNode.gain.setValueAtTime(volume, this.audioContext.currentTime);
                 gainNode.gain.exponentialRampToValueAtTime(0.01, this.audioContext.currentTime + duration);
 
                 oscillator.start(this.audioContext.currentTime);
@@ -189,38 +189,38 @@
 
                 const soundMap = {
                     drum: {
-                        beat: () => this.playTone(100, 0.1, 'triangle'),
-                        perfect: () => this.playTone(800, 0.15, 'sine'),
-                        great: () => this.playTone(600, 0.15, 'sine'),
-                        good: () => this.playTone(400, 0.15, 'sine'),
-                        miss: () => this.playTone(150, 0.1, 'sawtooth')
+                        beat: () => this.playTone(100, 0.1, 'triangle', 0.1),
+                        perfect: () => this.playTone(800, 0.15, 'sine', 0.25),
+                        great: () => this.playTone(600, 0.15, 'sine', 0.25),
+                        good: () => this.playTone(400, 0.15, 'sine', 0.25),
+                        miss: () => this.playTone(150, 0.1, 'sawtooth', 0.2)
                     },
                     piano: {
-                        beat: () => this.playTone(440, 0.2, 'sine'),
-                        perfect: () => this.playTone(880, 0.2, 'sine'),
-                        great: () => this.playTone(660, 0.2, 'sine'),
-                        good: () => this.playTone(550, 0.2, 'sine'),
-                        miss: () => this.playTone(220, 0.15, 'square')
+                        beat: () => this.playTone(440, 0.2, 'sine', 0.1),
+                        perfect: () => this.playTone(880, 0.2, 'sine', 0.25),
+                        great: () => this.playTone(660, 0.2, 'sine', 0.25),
+                        good: () => this.playTone(550, 0.2, 'sine', 0.25),
+                        miss: () => this.playTone(220, 0.15, 'square', 0.2)
                     },
                     space: {
-                        beat: () => this.playTone(200, 0.1, 'square'),
+                        beat: () => this.playTone(200, 0.1, 'square', 0.1),
                         perfect: () => {
-                            this.playTone(1000, 0.1, 'square');
-                            setTimeout(() => this.playTone(1200, 0.1, 'square'), 50);
+                            this.playTone(1000, 0.1, 'square', 0.25);
+                            setTimeout(() => this.playTone(1200, 0.1, 'square', 0.25), 50);
                         },
-                        great: () => this.playTone(800, 0.15, 'square'),
-                        good: () => this.playTone(600, 0.15, 'square'),
-                        miss: () => this.playTone(100, 0.2, 'sawtooth')
+                        great: () => this.playTone(800, 0.15, 'square', 0.25),
+                        good: () => this.playTone(600, 0.15, 'square', 0.25),
+                        miss: () => this.playTone(100, 0.2, 'sawtooth', 0.2)
                     },
                     animal: {
-                        beat: () => this.playTone(300, 0.1, 'triangle'),
+                        beat: () => this.playTone(300, 0.1, 'triangle', 0.1),
                         perfect: () => {
-                            this.playTone(600, 0.05, 'sine');
-                            setTimeout(() => this.playTone(800, 0.05, 'sine'), 50);
+                            this.playTone(600, 0.05, 'sine', 0.25);
+                            setTimeout(() => this.playTone(800, 0.05, 'sine', 0.25), 50);
                         },
-                        great: () => this.playTone(500, 0.1, 'sine'),
-                        good: () => this.playTone(400, 0.1, 'sine'),
-                        miss: () => this.playTone(200, 0.15, 'triangle')
+                        great: () => this.playTone(500, 0.1, 'sine', 0.25),
+                        good: () => this.playTone(400, 0.1, 'sine', 0.25),
+                        miss: () => this.playTone(200, 0.15, 'triangle', 0.2)
                     }
                 };
 
@@ -231,7 +231,7 @@
 
             // 메트로놈 소리
             playMetronome() {
-                this.playTone(1000, 0.05, 'square');
+                this.playTone(1000, 0.05, 'square', 0.15);
             }
         }
 
@@ -776,7 +776,7 @@
 
         // 게임 화면
         function GameScreen({ settings, onNavigate, onScoreSubmit, currentTeam }) {
-            const [gameState, setGameState] = useState('ready'); // ready, playing, finished
+            const [gameState, setGameState] = useState('ready'); // ready, playing, paused, finished
             const [score, setScore] = useState(0);
             const [combo, setCombo] = useState(0);
             const [maxCombo, setMaxCombo] = useState(0);
@@ -784,8 +784,10 @@
             const [currentBeat, setCurrentBeat] = useState(0);
             const [showJudgement, setShowJudgement] = useState(null);
             const [rings, setRings] = useState([]);
+            const [showPauseMenu, setShowPauseMenu] = useState(false);
             const lastBeatTimeRef = useRef(null);
             const gameStartTimeRef = useRef(null);
+            const pauseTimeRef = useRef(null);
 
             const beatInterval = 60000 / settings.bpm; // BPM을 ms로 변환
             const totalBeats = 30; // 총 비트 수
@@ -808,6 +810,7 @@
                 setJudgements({ perfect: 0, great: 0, good: 0, miss: 0 });
                 setCurrentBeat(0);
                 setRings([]);
+                setShowPauseMenu(false);
                 const now = Date.now();
                 gameStartTimeRef.current = now;
                 lastBeatTimeRef.current = now;
@@ -817,6 +820,28 @@
                 if (settings.guideLine) {
                     setRings([{ id: now, startTime: now }]);
                 }
+            };
+
+            // 일시정지
+            const pauseGame = () => {
+                setGameState('paused');
+                setShowPauseMenu(true);
+                pauseTimeRef.current = Date.now();
+            };
+
+            // 계속하기
+            const resumeGame = () => {
+                const pauseDuration = Date.now() - pauseTimeRef.current;
+                lastBeatTimeRef.current += pauseDuration;
+                setGameState('playing');
+                setShowPauseMenu(false);
+            };
+
+            // 게임 종료
+            const quitGame = () => {
+                setGameState('ready');
+                setShowPauseMenu(false);
+                onNavigate('home');
             };
 
             // 게임 로직
@@ -983,18 +1008,61 @@
 
             return (
                 <div className={`min-h-screen ${themeClass} flex flex-col`}>
+                    {/* 일시정지 메뉴 */}
+                    {showPauseMenu && (
+                        <div className="fixed inset-0 bg-black/70 flex items-center justify-center z-50">
+                            <div className="bg-white rounded-2xl shadow-2xl p-8 max-w-md w-full mx-4">
+                                <h2 className="text-3xl font-bold text-center mb-6">⏸️ 일시정지</h2>
+
+                                <div className="space-y-4 mb-6">
+                                    <div className="bg-gray-50 p-4 rounded-lg">
+                                        <div className="flex justify-between mb-2">
+                                            <span className="text-gray-600">현재 점수</span>
+                                            <span className="font-bold text-blue-600">{score}</span>
+                                        </div>
+                                        <div className="flex justify-between mb-2">
+                                            <span className="text-gray-600">콤보</span>
+                                            <span className="font-bold text-purple-600">{combo}</span>
+                                        </div>
+                                        <div className="flex justify-between">
+                                            <span className="text-gray-600">진행</span>
+                                            <span className="font-bold">{currentBeat}/{totalBeats}</span>
+                                        </div>
+                                    </div>
+                                </div>
+
+                                <div className="space-y-3">
+                                    <button
+                                        onClick={resumeGame}
+                                        className="w-full py-4 bg-green-500 text-white text-xl font-bold rounded-lg hover:bg-green-600 transition-all"
+                                    >
+                                        ▶️ 계속하기
+                                    </button>
+                                    <button
+                                        onClick={startGame}
+                                        className="w-full py-3 bg-blue-500 text-white font-bold rounded-lg hover:bg-blue-600 transition-all"
+                                    >
+                                        🔄 다시 시작
+                                    </button>
+                                    <button
+                                        onClick={quitGame}
+                                        className="w-full py-3 bg-gray-500 text-white font-bold rounded-lg hover:bg-gray-600 transition-all"
+                                    >
+                                        🏠 홈으로
+                                    </button>
+                                </div>
+                            </div>
+                        </div>
+                    )}
+
                     {/* 상단 정보 */}
                     <div className="bg-white/90 backdrop-blur-sm p-4 shadow-lg">
                         <div className="max-w-4xl mx-auto flex items-center justify-between">
                             <button
-                                onClick={() => {
-                                    if (confirm('게임을 종료하시겠습니까?')) {
-                                        onNavigate('home');
-                                    }
-                                }}
-                                className="px-4 py-2 bg-red-500 text-white rounded-lg hover:bg-red-600 transition-all"
+                                onClick={gameState === 'playing' ? pauseGame : () => onNavigate('home')}
+                                className="px-4 py-2 bg-orange-500 text-white rounded-lg hover:bg-orange-600 transition-all"
                             >
-                                종료
+                                {gameState === 'playing' ? '⏸️ 일시정지' : '← 뒤로가기'}
                             </button>
 
                             <div className="flex items-center space-x-6">
@@ -1087,7 +1155,7 @@
                                 onClick={handleTap}
                                 className="w-full py-8 bg-white/90 backdrop-blur-sm text-2xl font-bold rounded-2xl shadow-2xl active:scale-95 transition-transform"
                             >
-                                여기를 탭! 👆
+                                빛의 고리가 중앙에 닿을 때 탭! 👈
                             </button>
                         </div>
                     )}
@@ -1101,6 +1169,34 @@
             const [score, setScore] = useState(0);
             const [answered, setAnswered] = useState(false);
             const [selectedAnswer, setSelectedAnswer] = useState(null);
+
+            // 소리 재생 함수들
+            const playQuestionSound = (soundType) => {
+                soundSystem.init();
+                console.log('Playing sound:', soundType); // 디버깅용
+
+                if (soundType === "빗소리") {
+                    // 빗소리: 여러 개의 짧은 노이즈를 랜덤하게
+                    for (let i = 0; i < 25; i++) {
+                        setTimeout(() => {
+                            const freq = 1200 + Math.random() * 1000;
+                            soundSystem.playTone(freq, 0.1, 'sine', 0.4);
+                        }, i * 50 + Math.random() * 25);
+                    }
+                } else if (soundType === "강아지 짖는 소리") {
+                    // 강아지: 낮은 음에서 높은 음으로 빠르게
+                    soundSystem.playTone(200, 0.12, 'sawtooth', 0.6);
+                    setTimeout(() => soundSystem.playTone(350, 0.18, 'sawtooth', 0.6), 120);
+                    setTimeout(() => {
+                        soundSystem.playTone(200, 0.12, 'sawtooth', 0.6);
+                        setTimeout(() => soundSystem.playTone(350, 0.18, 'sawtooth', 0.6), 120);
+                    }, 500);
+                } else if (soundType === "드럼 소리") {
+                    // 드럼: 낮은 주파수의 펑 소리
+                    soundSystem.playTone(50, 0.5, 'triangle', 0.7);
+                    setTimeout(() => soundSystem.playTone(50, 0.5, 'triangle', 0.7), 700);
+                }
+            };
 
             const questions = [
                 {
@@ -1192,7 +1288,16 @@
                                 {/* 질문 */}
                                 <div className="text-center mb-8">
                                     <h3 className="text-2xl font-bold text-gray-800 mb-4">{q.question}</h3>
-                                    <div className="text-6xl mb-4">🔊</div>
+                                    <div className="mb-4">
+                                        <button
+                                            onClick={() => playQuestionSound(q.sound)}
+                                            className="text-6xl p-4 hover:scale-110 transition-transform active:scale-95 cursor-pointer bg-orange-100 hover:bg-orange-200 rounded-full border-4 border-orange-300 shadow-lg"
+                                            title="클릭하여 소리 듣기"
+                                        >
+                                            🔊
+                                        </button>
+                                        <div className="text-sm text-orange-600 font-bold mt-2">↑ 클릭하여 소리 듣기</div>
+                                    </div>
                                     <div className="text-xl text-gray-600 italic">"{q.description}"</div>
                                 </div>
 
