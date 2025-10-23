@@ -1173,28 +1173,109 @@
             // 소리 재생 함수들
             const playQuestionSound = (soundType) => {
                 soundSystem.init();
-                console.log('Playing sound:', soundType); // 디버깅용
+                const ctx = soundSystem.audioContext;
+                console.log('Playing sound:', soundType);
 
                 if (soundType === "빗소리") {
-                    // 빗소리: 여러 개의 짧은 노이즈를 랜덤하게
-                    for (let i = 0; i < 25; i++) {
-                        setTimeout(() => {
-                            const freq = 1200 + Math.random() * 1000;
-                            soundSystem.playTone(freq, 0.1, 'sine', 0.4);
-                        }, i * 50 + Math.random() * 25);
+                    // 빗소리: 화이트 노이즈로 더 자연스럽게
+                    const bufferSize = ctx.sampleRate * 2;
+                    const buffer = ctx.createBuffer(1, bufferSize, ctx.sampleRate);
+                    const data = buffer.getChannelData(0);
+
+                    // 화이트 노이즈 생성
+                    for (let i = 0; i < bufferSize; i++) {
+                        data[i] = Math.random() * 2 - 1;
                     }
+
+                    const noise = ctx.createBufferSource();
+                    noise.buffer = buffer;
+
+                    const filter = ctx.createBiquadFilter();
+                    filter.type = 'bandpass';
+                    filter.frequency.value = 3000;
+                    filter.Q.value = 1;
+
+                    const gainNode = ctx.createGain();
+                    gainNode.gain.setValueAtTime(0, ctx.currentTime);
+                    gainNode.gain.linearRampToValueAtTime(0.15, ctx.currentTime + 0.1);
+                    gainNode.gain.linearRampToValueAtTime(0.15, ctx.currentTime + 1.5);
+                    gainNode.gain.linearRampToValueAtTime(0, ctx.currentTime + 2);
+
+                    noise.connect(filter);
+                    filter.connect(gainNode);
+                    gainNode.connect(ctx.destination);
+
+                    noise.start(ctx.currentTime);
+                    noise.stop(ctx.currentTime + 2);
+
                 } else if (soundType === "강아지 짖는 소리") {
-                    // 강아지: 낮은 음에서 높은 음으로 빠르게
-                    soundSystem.playTone(200, 0.12, 'sawtooth', 0.6);
-                    setTimeout(() => soundSystem.playTone(350, 0.18, 'sawtooth', 0.6), 120);
-                    setTimeout(() => {
-                        soundSystem.playTone(200, 0.12, 'sawtooth', 0.6);
-                        setTimeout(() => soundSystem.playTone(350, 0.18, 'sawtooth', 0.6), 120);
-                    }, 500);
+                    // 강아지: 더 복잡한 파형으로 자연스럽게
+                    const playBark = (startTime) => {
+                        // 낮은 음 (왁)
+                        const osc1 = ctx.createOscillator();
+                        const gain1 = ctx.createGain();
+                        osc1.type = 'sawtooth';
+                        osc1.frequency.setValueAtTime(180, startTime);
+                        osc1.frequency.exponentialRampToValueAtTime(140, startTime + 0.08);
+                        gain1.gain.setValueAtTime(0.4, startTime);
+                        gain1.gain.exponentialRampToValueAtTime(0.01, startTime + 0.15);
+                        osc1.connect(gain1);
+                        gain1.connect(ctx.destination);
+                        osc1.start(startTime);
+                        osc1.stop(startTime + 0.15);
+
+                        // 높은 음 (으)
+                        const osc2 = ctx.createOscillator();
+                        const gain2 = ctx.createGain();
+                        osc2.type = 'square';
+                        osc2.frequency.setValueAtTime(400, startTime + 0.08);
+                        osc2.frequency.exponentialRampToValueAtTime(280, startTime + 0.2);
+                        gain2.gain.setValueAtTime(0.3, startTime + 0.08);
+                        gain2.gain.exponentialRampToValueAtTime(0.01, startTime + 0.25);
+                        osc2.connect(gain2);
+                        gain2.connect(ctx.destination);
+                        osc2.start(startTime + 0.08);
+                        osc2.stop(startTime + 0.25);
+                    };
+
+                    playBark(ctx.currentTime);
+                    playBark(ctx.currentTime + 0.5);
+
                 } else if (soundType === "드럼 소리") {
-                    // 드럼: 낮은 주파수의 펑 소리
-                    soundSystem.playTone(50, 0.5, 'triangle', 0.7);
-                    setTimeout(() => soundSystem.playTone(50, 0.5, 'triangle', 0.7), 700);
+                    // 드럼: 저음과 노이즈 조합으로 현실적으로
+                    const playDrum = (startTime) => {
+                        // 저음부
+                        const osc = ctx.createOscillator();
+                        const oscGain = ctx.createGain();
+                        osc.frequency.setValueAtTime(150, startTime);
+                        osc.frequency.exponentialRampToValueAtTime(40, startTime + 0.3);
+                        oscGain.gain.setValueAtTime(0.8, startTime);
+                        oscGain.gain.exponentialRampToValueAtTime(0.01, startTime + 0.4);
+                        osc.connect(oscGain);
+                        oscGain.connect(ctx.destination);
+                        osc.start(startTime);
+                        osc.stop(startTime + 0.4);
+
+                        // 타격음 (노이즈)
+                        const bufferSize = ctx.sampleRate * 0.1;
+                        const buffer = ctx.createBuffer(1, bufferSize, ctx.sampleRate);
+                        const data = buffer.getChannelData(0);
+                        for (let i = 0; i < bufferSize; i++) {
+                            data[i] = (Math.random() * 2 - 1) * Math.exp(-i / (bufferSize * 0.1));
+                        }
+
+                        const noise = ctx.createBufferSource();
+                        noise.buffer = buffer;
+                        const noiseGain = ctx.createGain();
+                        noiseGain.gain.setValueAtTime(0.5, startTime);
+                        noiseGain.gain.exponentialRampToValueAtTime(0.01, startTime + 0.1);
+                        noise.connect(noiseGain);
+                        noiseGain.connect(ctx.destination);
+                        noise.start(startTime);
+                    };
+
+                    playDrum(ctx.currentTime);
+                    playDrum(ctx.currentTime + 0.7);
                 }
             };
 
