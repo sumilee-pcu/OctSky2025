@@ -1173,27 +1173,28 @@
             // 소리 재생 함수들
             const playQuestionSound = (soundType) => {
                 soundSystem.init();
+                console.log('Playing sound:', soundType); // 디버깅용
 
                 if (soundType === "빗소리") {
                     // 빗소리: 여러 개의 짧은 노이즈를 랜덤하게
-                    for (let i = 0; i < 20; i++) {
+                    for (let i = 0; i < 25; i++) {
                         setTimeout(() => {
-                            const freq = 1000 + Math.random() * 800;
-                            soundSystem.playTone(freq, 0.08, 'sine', 0.3);
-                        }, i * 60 + Math.random() * 30);
+                            const freq = 1200 + Math.random() * 1000;
+                            soundSystem.playTone(freq, 0.1, 'sine', 0.4);
+                        }, i * 50 + Math.random() * 25);
                     }
                 } else if (soundType === "강아지 짖는 소리") {
                     // 강아지: 낮은 음에서 높은 음으로 빠르게
-                    soundSystem.playTone(180, 0.1, 'sawtooth', 0.5);
-                    setTimeout(() => soundSystem.playTone(320, 0.15, 'sawtooth', 0.5), 100);
+                    soundSystem.playTone(200, 0.12, 'sawtooth', 0.6);
+                    setTimeout(() => soundSystem.playTone(350, 0.18, 'sawtooth', 0.6), 120);
                     setTimeout(() => {
-                        soundSystem.playTone(180, 0.1, 'sawtooth', 0.5);
-                        setTimeout(() => soundSystem.playTone(320, 0.15, 'sawtooth', 0.5), 100);
-                    }, 450);
+                        soundSystem.playTone(200, 0.12, 'sawtooth', 0.6);
+                        setTimeout(() => soundSystem.playTone(350, 0.18, 'sawtooth', 0.6), 120);
+                    }, 500);
                 } else if (soundType === "드럼 소리") {
                     // 드럼: 낮은 주파수의 펑 소리
-                    soundSystem.playTone(60, 0.4, 'triangle', 0.6);
-                    setTimeout(() => soundSystem.playTone(60, 0.4, 'triangle', 0.6), 650);
+                    soundSystem.playTone(50, 0.5, 'triangle', 0.7);
+                    setTimeout(() => soundSystem.playTone(50, 0.5, 'triangle', 0.7), 700);
                 }
             };
 
@@ -1287,13 +1288,16 @@
                                 {/* 질문 */}
                                 <div className="text-center mb-8">
                                     <h3 className="text-2xl font-bold text-gray-800 mb-4">{q.question}</h3>
-                                    <button
-                                        onClick={() => playQuestionSound(q.sound)}
-                                        className="text-6xl mb-4 hover:scale-110 transition-transform active:scale-95 cursor-pointer bg-transparent border-none"
-                                        title="소리 듣기"
-                                    >
-                                        🔊
-                                    </button>
+                                    <div className="mb-4">
+                                        <button
+                                            onClick={() => playQuestionSound(q.sound)}
+                                            className="text-6xl p-4 hover:scale-110 transition-transform active:scale-95 cursor-pointer bg-orange-100 hover:bg-orange-200 rounded-full border-4 border-orange-300 shadow-lg"
+                                            title="클릭하여 소리 듣기"
+                                        >
+                                            🔊
+                                        </button>
+                                        <div className="text-sm text-orange-600 font-bold mt-2">↑ 클릭하여 소리 듣기</div>
+                                    </div>
                                     <div className="text-xl text-gray-600 italic">"{q.description}"</div>
                                 </div>
 
